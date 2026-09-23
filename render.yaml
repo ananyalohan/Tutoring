@@ -1,0 +1,17 @@
+# One-click deploy on Render (render.com -> New -> Blueprint -> pick this repo).
+# Free-tier disks are ephemeral, so the demo re-seeds itself whenever the service restarts.
+services:
+  - type: web
+    name: lva-tutor-reporting
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    # --preload runs create_app() once (seeding the demo DB) before workers fork.
+    startCommand: gunicorn --preload --workers 2 --bind 0.0.0.0:$PORT "app:create_app()"
+    envVars:
+      - key: DEMO_MODE
+        value: "1"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: PYTHON_VERSION
+        value: 3.12.6

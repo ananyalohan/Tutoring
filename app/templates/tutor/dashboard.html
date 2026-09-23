@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Log sessions{% endblock %}
+{% block content %}
+<div class="hero">
+  <span class="hand">Hi {{ g.user.name.split()[0] }},</span>
+  <h1>How did tutoring go?</h1>
+  <p>Log each session when it happens and the office's monthly report fills itself in.</p>
+</div>
+
+<section class="card">
+  <h2>Log a session</h2>
+  {% if students %}
+  <form method="post" action="{{ url_for('tutor.create_session') }}">
+    {% include "_session_fields.html" %}
+    <button class="primary">Save session</button>
+  </form>
+  {% else %}
+  <div class="empty">
+    <span class="hand">Almost there!</span>
+    <p>You don't have any students assigned yet. The office matches new tutors with students, and once they do, your students will appear here. Questions? Email <a href="mailto:info@lvaep.org">info@lvaep.org</a> or call (973) 566-6200 x216.</p>
+  </div>
+  {% endif %}
+</section>
+
+{% if students %}
+<section class="card">
+  <h2>My students</h2>
+  <div class="student-grid">
+    {% for s in students %}
+    <a class="student" href="{{ url_for('students.detail', student_id=s.student_id) }}">
+      <strong>{{ s.student }}</strong>
+      <span class="meta">{{ s.site }}</span>
+      {% if s.meeting_times %}<span class="meta">{{ s.meeting_times }}</span>{% endif %}
+      <span class="big">{{ s.month_hours|hours }} <small>hrs this month</small></span>
+      <span class="meta">Last entry · <span class="mono">{{ s.last_session or 'none yet' }}</span></span>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<section class="card">
+  <h2>Recent entries</h2>
+  {% if recent %}
+  <table>
+    <thead><tr><th>Date</th><th>Student</th><th>Status</th><th class="num">Hours</th><th>Notes</th><th></th></tr></thead>
+    <tbody>
+    {% for x in recent %}
+      <tr>
+        <td class="mono">{{ x.session_date }}</td>
+        <td>{{ x.student }}</td>
+        <td><span class="chip s-{{ x.status }}">{{ 'Held' if x.status == 'held' else x.status }}</span>
+          {% if x.status != 'held' %}<span class="muted" style="font-size:.85rem">{{ statuses[x.status] }}</span>{% endif %}</td>
+        <td class="num">{{ x.hours|hours if x.status == 'held' else '' }}</td>
+        <td>{{ x.notes }}</td>
+        <td class="actions">
+          {% if x.session_date[:7] in closed %}
+            <span class="locked" title="Staff have closed this month's report">🔒 Locked</span>
+          {% else %}
+            <a href="{{ url_for('tutor.edit_session', session_id=x.id) }}">Edit</a>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">Nothing logged yet. Your first session will appear here.</p>
+  {% endif %}
+</section>
+{% endblock %}

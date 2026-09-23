@@ -1,0 +1,44 @@
+{# Shared by the "log a session" and "edit session" forms. Expects form, students, statuses, today, errors. #}
+{% if errors %}
+<div class="flash error"><ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul></div>
+{% endif %}
+<input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+<div class="fields">
+  <label>Student
+    <select name="student_id" required>
+      <option value="">Choose…</option>
+      {% for s in students %}
+      <option value="{{ s.student_id }}" {% if form.student_id|string == s.student_id|string %}selected{% endif %}>{{ s.student }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>Date
+    <input type="date" name="session_date" max="{{ today }}" required value="{{ form.session_date }}">
+  </label>
+  <fieldset class="status">
+    <legend>What happened?</legend>
+    {% for code, label in statuses.items() %}
+    <label class="pill s-{{ code }}"><input type="radio" name="status" value="{{ code }}" {% if form.status == code %}checked{% endif %}> {{ label }}</label>
+    {% endfor %}
+  </fieldset>
+  <label class="hours">Hours
+    <input type="number" name="hours" min="0.25" max="8" step="0.25" value="{{ form.hours }}">
+  </label>
+  <label class="notes">Notes <span class="muted">(optional, e.g. homework assigned)</span>
+    <input type="text" name="notes" maxlength="500" value="{{ form.notes or '' }}">
+  </label>
+</div>
+<script>
+  // Hours only apply to held sessions; hide the field for absences/holidays.
+  (function () {
+    const form = document.currentScript.closest('form');
+    const hours = form.querySelector('.hours');
+    const sync = () => {
+      const held = form.querySelector('input[name=status]:checked')?.value === 'held';
+      hours.hidden = !held;
+      hours.querySelector('input').required = held;
+    };
+    form.querySelectorAll('input[name=status]').forEach(r => r.addEventListener('change', sync));
+    sync();
+  })();
+</script>

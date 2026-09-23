@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}{{ student.name }}{% endblock %}
+{% block content %}
+<section class="card">
+  <div class="heading-row">
+    <h1>{{ student.name }}</h1>
+    <div class="fy-nav">
+      <a href="?fy={{ fy - 1 }}">&larr;</a> <strong>{{ fy_label }}</strong> <a href="?fy={{ fy + 1 }}">&rarr;</a>
+      <button class="link" onclick="window.print()">Print</button>
+    </div>
+  </div>
+
+  {% for a in assignments %}
+  <div class="assignment {% if a.end_date %}ended{% endif %}">
+    <span><b>Tutor:</b> {{ a.tutor }}</span>
+    <span><b>Site:</b> {{ a.site or '—' }}</span>
+    <span><b>Day(s):</b> {{ a.meeting_days or '—' }}</span>
+    <span><b>Time(s):</b> {{ a.meeting_times or '—' }}</span>
+    <span><b>Since:</b> {{ a.start_date }}</span>
+    {% if a.end_date %}<span class="stopped"><b>Stopped</b> {{ a.end_date }}: {{ a.end_reason }}</span>{% endif %}
+  </div>
+  {% endfor %}
+
+  <h2>Attendance</h2>
+  <div class="legend">
+    <span>Hours per day{% if g.user.role == 'tutor' %} (your sessions){% else %} (all tutors){% endif %}:</span>
+    <span class="chip s-held">1.5 held</span><span class="chip s-TA">TA tutor absent</span>
+    <span class="chip s-SA">SA student absent</span><span class="chip s-H">H holiday</span>
+  </div>
+  <div class="grid-scroll">
+  <table class="year-grid">
+    <thead><tr><th></th>{% for name in grid.month_names %}<th>{{ name }}</th>{% endfor %}</tr></thead>
+    <tbody>
+    {% for day in range(1, 32) %}
+      <tr>
+        <th>{{ day }}</th>
+        {% for m in grid.months %}
+          {% if day > grid.days_in[m] %}
+            <td class="na"></td>
+          {% else %}
+            {% set cell = grid.cells.get((m, day)) %}
+            <td class="{% if cell and cell[0] %}has-hours{% elif cell and cell[1] == ['H'] %}holiday{% elif cell %}absent {{ cell[1][0] }}{% endif %}">
+              {% if cell %}{% if cell[0] %}{{ cell[0]|hours }}{% endif %}{% for c in cell[1] %} {{ c }}{% endfor %}{% endif %}
+            </td>
+          {% endif %}
+        {% endfor %}
+      </tr>
+    {% endfor %}
+    </tbody>
+    <tfoot><tr><th>Total</th>{% for m in grid.months %}<td>{{ grid.totals[m]|hours }}</td>{% endfor %}</tr></tfoot>
+  </table>
+  </div>
+  <div class="year-total"><span>{{ grid.grand_total|hours }}</span> hours tutored in {{ fy_label }}</div>
+</section>
+
+<section class="card" id="achievements">
+  <h2>Achievements</h2>
+  <p class="muted">Record a goal when the student reaches it. <span class="star">*</span> marks goals starred on the original form.</p>
+  <div class="goals">
+  {% for letter, category, goals in goal_categories %}
+    <div class="goal-group">
+      <h3><span class="letter">{{ letter }}</span>{{ category }}</h3>
+      <ul class="goal-list">
+      {% for code, label, starred in goals %}
+        <li class="{% if code in attained %}attained{% endif %}">
+          <span>{% if starred %}<span class="star">*</span>{% endif %}{{ label }}</span>
+          {% if code in attained %}
+            <span class="done">✓ {{ attained[code].attained_on }}</span>
+            <form method="post" class="inline" action="{{ url_for('students.delete_achievement', student_id=student.id, achievement_id=attained[code].id) }}">
+              <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+              <button class="link small" title="Undo">undo</button>
+            </form>
+          {% else %}
+            <form method="post" class="inline" action="{{ url_for('students.add_achievement', student_id=student.id) }}">
+              <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+              <input type="hidden" name="goal_code" value="{{ code }}">
+              <input type="date" name="attained_on" value="{{ today }}" max="{{ today }}" aria-label="Date attained">
+              <button class="small">Mark attained</button>
+            </form>
+          {% endif %}
+        </li>
+      {% endfor %}
+      </ul>
+    </div>
+  {% endfor %}
+    <div class="goal-group">
+      <h3><span class="letter">E</span>Other(s)</h3>
+      <ul class="goal-list">
+        {% for o in other_goals %}
+        <li class="attained"><span>{{ o.other_text }}</span><span class="done">✓ {{ o.attained_on }}</span>
+          <form method="post" class="inline" action="{{ url_for('students.delete_achievement', student_id=student.id, achievement_id=o.id) }}">
+            <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+            <button class="link small">undo</button>
+          </form>
+        </li>
+        {% endfor %}
+      </ul>
+      <form method="post" action="{{ url_for('students.add_achievement', student_id=student.id) }}" class="inline">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <input type="hidden" name="goal_code" value="E">
+        <input type="text" name="other_text" placeholder="Describe the goal" required>
+        <input type="date" name="attained_on" value="{{ today }}" max="{{ today }}" aria-label="Date attained">
+        <button class="small">Add</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+{% for a in assignments if not a.end_date %}
+<section class="card stopped-card">
+  <h2>Stopped tutoring{% if g.user.role == 'staff' %} with {{ a.tutor }}{% endif %}?</h2>
+  <p class="muted">Let the office know straight away if this student is no longer being tutored.</p>
+  <form method="post" action="{{ url_for('students.stop_assignment', assignment_id=a.id) }}" class="fields"
+        onsubmit="return confirm('Mark this pairing as stopped? You won\'t be able to log new sessions after this date.')">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <label>Last day of tutoring <input type="date" name="end_date" value="{{ today }}" max="{{ today }}" required></label>
+    <label class="notes">Reason <input type="text" name="end_reason" required maxlength="300"></label>
+    <button class="danger">Mark as stopped</button>
+  </form>
+</section>
+{% endfor %}
+{% endblock %}

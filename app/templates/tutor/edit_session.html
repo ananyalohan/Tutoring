@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Edit session{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>Edit session</h1>
+  <form method="post">
+    {% include "_session_fields.html" %}
+    <button class="primary">Save changes</button>
+    <a href="{{ url_for('tutor.dashboard') }}">Cancel</a>
+  </form>
+  <form method="post" action="{{ url_for('tutor.delete_session', session_id=session_row.id) }}"
+        onsubmit="return confirm('Delete this session?')" class="danger-zone">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <button class="danger">Delete session</button>
+  </form>
+</section>
+{% endblock %}

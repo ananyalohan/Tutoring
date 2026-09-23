@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Log in{% endblock %}
+{% block content %}
+<div class="login-wrap">
+  <section class="login-hero">
+    <span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span>
+    <div style="position: relative">
+      <div class="hand">Literacy Volunteers of America</div>
+      <h1>Every session <em>counts.</em></h1>
+      <p>Log your tutoring hours in seconds. Monthly reports put themselves together.</p>
+    </div>
+  </section>
+
+  <section class="card login-card">
+    <h2>Welcome back</h2>
+    <form method="post" id="login-form">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <label>Email <input type="email" name="email" required autofocus value="{{ request.form.email }}"></label>
+      <label>Password <input type="password" name="password" required></label>
+      <button class="primary">Log in</button>
+    </form>
+    <p class="switch">New tutor? <a href="{{ url_for('auth.signup') }}">Create an account</a></p>
+    {% if config.DEMO_MODE %}
+    <div class="demo">
+      <span class="hand" style="font-size: 1.35rem">Just looking around?</span>
+      <p class="muted" style="margin: .2rem 0 0; font-size: .88rem">This is a demo with sample data, and it resets regularly. Pick a role to log in:</p>
+      <div class="demo-buttons">
+        <button type="button" data-email="staff@lvaep.org">Office staff</button>
+        <button type="button" data-email="maria@example.com">Tutor (Maria)</button>
+      </div>
+    </div>
+    <script>
+      document.querySelectorAll('.demo-buttons button').forEach(b => b.addEventListener('click', () => {
+        const f = document.getElementById('login-form');
+        f.email.value = b.dataset.email;
+        f.password.value = '{{ config.DEMO_PASSWORD }}';
+        f.submit();
+      }));
+    </script>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

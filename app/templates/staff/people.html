@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Tutors &amp; students{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>Assignments</h1>
+  <form method="post" action="{{ url_for('staff.add_assignment') }}" class="fields">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <label>Tutor <select name="tutor_id" required><option value="">Choose…</option>
+      {% for t in tutors %}<option value="{{ t.id }}">{{ t.name }}</option>{% endfor %}</select></label>
+    <label>Student <select name="student_id" required><option value="">Choose…</option>
+      {% for s in students %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}</select></label>
+    <label>Site <input name="site" placeholder="Bloomfield Public Library"></label>
+    <label>Day(s) <input name="meeting_days" placeholder="Mon/Thu"></label>
+    <label>Time(s) <input name="meeting_times" placeholder="6-7:30pm"></label>
+    <label>Start date <input type="date" name="start_date" value="{{ today }}" required></label>
+    <button class="primary">Assign</button>
+  </form>
+  <table>
+    <thead><tr><th>Tutor</th><th>Student</th><th>Site</th><th>Schedule</th><th>Start</th><th>Status</th></tr></thead>
+    <tbody>
+    {% for a in assignments %}
+      <tr class="{% if a.end_date %}ended{% endif %}">
+        <td>{{ a.tutor }}</td>
+        <td><a href="{{ url_for('students.detail', student_id=a.student_id) }}">{{ a.student }}</a></td>
+        <td>{{ a.site }}</td><td>{{ a.meeting_days }} {{ a.meeting_times }}</td><td>{{ a.start_date }}</td>
+        <td>{% if a.end_date %}Stopped {{ a.end_date }}: {{ a.end_reason }}{% else %}Active{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<div class="two-col">
+<section class="card">
+  <h2>Tutors</h2>
+  <form method="post" action="{{ url_for('staff.add_tutor') }}" class="fields">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <label>Name <input name="name" required></label>
+    <label>Email <input type="email" name="email" required></label>
+    <label>Temporary password <input type="text" name="password" minlength="8" required></label>
+    <button>Add tutor</button>
+  </form>
+  <ul>{% for t in tutors %}<li>{{ t.name }} <span class="muted">{{ t.email }} · {{ t.active }} active</span></li>{% endfor %}</ul>
+</section>
+<section class="card">
+  <h2>Students</h2>
+  <form method="post" action="{{ url_for('staff.add_student') }}" class="fields">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <label>Name <input name="name" required></label>
+    <button>Add student</button>
+  </form>
+  <ul>{% for s in students %}<li><a href="{{ url_for('students.detail', student_id=s.id) }}">{{ s.name }}</a></li>{% endfor %}</ul>
+</section>
+</div>
+{% endblock %}

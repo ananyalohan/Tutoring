@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Report {{ r.month }}{% endblock %}
+{% block content %}
+<section class="card">
+  <div class="heading-row">
+    <div><span class="hand">Here's how the month is going</span><h1>Monthly report</h1></div>
+    <form method="get" class="inline month-picker">
+      <a href="?month={{ prev_month }}">&larr;</a>
+      <input type="month" name="month" value="{{ r.month }}" onchange="this.form.submit()">
+      <a href="?month={{ next_month }}">&rarr;</a>
+    </form>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><span>{{ r.total_hours|hours }}</span>hours tutored</div>
+    <div class="stat"><span>{{ r.total_held }}</span>sessions held</div>
+    <div class="stat"><span>{{ r.rows|length }}</span>active pairs</div>
+    <div class="stat {% if r.missing %}warn{% endif %}"><span>{{ r.missing|length }}</span>pairs with nothing logged</div>
+  </div>
+
+  <div class="toolbar">
+    <a class="button" href="{{ url_for('staff.report_csv', month=r.month) }}">Download CSV</a>
+    {% if closed %}
+      <span class="muted">Closed by {{ closed.name }} on {{ closed.closed_at[:10] }}; tutors can't edit this month.</span>
+      <form method="post" class="inline" action="{{ url_for('staff.reopen_month', month=r.month) }}">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <button class="link">Reopen</button>
+      </form>
+    {% else %}
+      <form method="post" class="inline" action="{{ url_for('staff.close_month', month=r.month) }}"
+            onsubmit="return confirm('Close {{ r.month }}? Tutors will no longer be able to add or edit sessions for this month.')">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <button>Close month</button>
+      </form>
+      {% if is_current %}<span class="muted">Month in progress: numbers will change as tutors log sessions.</span>{% endif %}
+    {% endif %}
+  </div>
+</section>
+
+{% if r.missing or r.stopped or unassigned %}
+<section class="card attention">
+  <h2>Needs attention</h2>
+  <ul>
+    {% for t in unassigned %}
+    <li><b>No students:</b> {{ t.name }} ({{ t.email }}) has no active students. <a href="{{ url_for('staff.people') }}">Assign a student</a></li>
+    {% endfor %}
+    {% for p in r.stopped %}
+    <li><b>Stopped:</b> {{ p.student }} with {{ p.tutor }} on {{ p.end_date }} ({{ p.end_reason }})</li>
+    {% endfor %}
+    {% for p in r.missing %}
+    <li><b>No entries:</b> {{ p.tutor }} hasn't logged anything for {{ p.student }} this month</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+<section class="card">
+  <h2>Hours by tutor and student</h2>
+  <table>
+    <thead><tr><th>Tutor</th><th>Student</th><th>Site</th><th class="num">Hours</th><th class="num">Held</th>
+      <th class="num" title="Tutor absent">TA</th><th class="num" title="Student absent">SA</th><th class="num" title="Holiday">H</th><th>Last entry</th></tr></thead>
+    <tbody>
+    {% for tutor, rows in r.rows|groupby('tutor') %}
+      {% for p in rows %}
+      <tr class="{% if p.entries == 0 %}missing{% endif %}">
+        <td class="tutor-cell">{% if loop.first %}{{ tutor }}{% endif %}</td>
+        <td><a href="{{ url_for('students.detail', student_id=p.student_id) }}">{{ p.student }}</a>{% if p.end_date %} <span class="tag">stopped</span>{% endif %}</td>
+        <td>{{ p.site }}</td>
+        <td class="num">{{ p.hours|hours }}</td>
+        <td class="num">{{ p.held }}</td>
+        <td class="num">{% if p.ta %}<span class="chip s-TA">{{ p.ta }}</span>{% endif %}</td>
+        <td class="num">{% if p.sa %}<span class="chip s-SA">{{ p.sa }}</span>{% endif %}</td>
+        <td class="num">{% if p.holiday %}<span class="chip s-H">{{ p.holiday }}</span>{% endif %}</td>
+        <td class="mono">{{ p.last_entry or '—' }}</td>
+      </tr>
+      {% endfor %}
+      {% if rows|length > 1 %}
+      <tr class="subtotal"><td></td><td colspan="2">{{ tutor }} subtotal</td>
+        <td class="num">{{ rows|sum(attribute='hours')|hours }}</td><td class="num">{{ rows|sum(attribute='held') }}</td><td colspan="4"></td></tr>
+      {% endif %}
+    {% else %}
+      <tr><td colspan="9" class="muted">No active assignments this month.</td></tr>
+    {% endfor %}
+    </tbody>
+    <tfoot><tr><th colspan="3">Total</th><th class="num">{{ r.total_hours|hours }}</th><th class="num">{{ r.total_held }}</th><th colspan="4"></th></tr></tfoot>
+  </table>
+</section>
+
+<section class="card">
+  <h2>Achievements this month</h2>
+  {% if r.achievements %}
+  <table>
+    <thead><tr><th>Date</th><th>Student</th><th>Goal</th><th>Recorded by</th></tr></thead>
+    <tbody>{% for a in r.achievements %}<tr><td class="mono">{{ a.attained_on }}</td><td>{{ a.student }}</td><td><span class="done">✓</span> {{ a.label }}</td><td>{{ a.recorded_by }}</td></tr>{% endfor %}</tbody>
+  </table>
+  {% else %}<p class="muted">None recorded.</p>{% endif %}
+</section>
+{% endblock %}

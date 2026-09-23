@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}{{ code }}{% endblock %}
+{% block content %}
+<section class="card narrow" style="text-align: center">
+  <span class="hand">Oops!</span>
+  <h1 style="font-size: 3.5rem; margin: .2rem 0">{{ code }}</h1>
+  <p>{{ message }}</p>
+  <a class="button" href="{{ url_for('home') }}">Take me home</a>
+</section>
+{% endblock %}
